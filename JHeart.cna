@@ -1,0 +1,41 @@
+# --- 辅助函数：读取 BOF 数据 ---
+sub readbof {
+	local('$barch $handle $data');
+	$barch  = barch($1);
+	$handle = openf(script_resource("./JHeart/JHeart.o"));
+	$data   = readb($handle, -1);
+	closef($handle);
+	if ($data eq "") {
+		berror($1, "Could not read BOF file: JHeart.o");
+	}
+	return $data;
+}
+
+# --- 别名命令定义 ---
+alias jheart {
+    local('$bid $data $args');
+    $bid = $1;
+
+    # 1. 读取 BOF
+    $data = readbof($bid);
+    if ($data eq "") { return; }
+
+    # 2. 参数打包 (目前 JHeart 逻辑是全自动扫描，无需外部参数)
+    # 如果后续需要扩展扫描特定目录，可以在这里增加 bof_pack
+    # $args = bof_pack($bid, "z", $2); 
+
+    # 3. 任务执行提示
+    btask($bid, "Tasked beacon to run JHeart: Scanning for white-app DLL hijacking opportunities ...");
+
+    # 4. 执行 BOF (对应 go 函数)
+    # 使用 beacon_inline_execute 是更符合 SA.cna 风格的写法
+    beacon_inline_execute($bid, $data, "go", $args);
+}
+
+# --- 注册命令帮助信息 ---
+beacon_command_register(
+    "jheart", 
+    "Automated scanner for DLL hijacking opportunities in AutoRun items.", 
+    "Usage: jheart\n\nAnalyzes signed executables in HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run, checks for directory write permissions, and identifies missing non-system DLLs."
+);
+
